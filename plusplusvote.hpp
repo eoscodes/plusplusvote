@@ -1,6 +1,5 @@
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/crypto.h>
-#include <eosiolib/types.h>
 #include <eosiolib/currency.hpp>
 
 #define SYS_SYMBOL S(4, YAS)
@@ -16,6 +15,8 @@
 using namespace eosio;
 using namespace std;
 
+const uint32_t sec_per_day = 24 * 3600;
+
 class plusplusvote : public eosio::contract
 {
 public:
@@ -26,7 +27,21 @@ public:
     // @abi action
     void claim(const account_name user);
 
+    // @abi action
+    void check(const account_name user);
+
+
 private:
+    uint64_t _random(account_name user, uint64_t range)
+    {
+        auto mixd = tapos_block_prefix() * tapos_block_num() + user + current_time();
+        const char *mixedChar = reinterpret_cast<const char *>(&mixd);
+        checksum256 result;
+        sha256((char *)mixedChar, sizeof(mixedChar), &result);
+        uint64_t num1 = *(uint64_t *)(&result.hash[0]) + *(uint64_t *)(&result.hash[8]) * 10 + *(uint64_t *)(&result.hash[16]) * 100 + *(uint64_t *)(&result.hash[24]) * 1000;
+        uint64_t random_num = (num1 % range);
+        return random_num;
+    }
     struct voter_info
     {
         account_name owner = 0;
@@ -62,4 +77,4 @@ private:
 
 };
 
-EOSIO_ABI(plusplusvote, (claim))
+EOSIO_ABI(plusplusvote, (claim)(check))
