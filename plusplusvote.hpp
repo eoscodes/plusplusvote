@@ -21,8 +21,8 @@ class plusplusvote : public eosio::contract
 {
 public:
     plusplusvote(account_name self) : eosio::contract(self),
-                                   _claimer(_self, _self),
-                                   _voters(SYSTEM_CONTRACT, SYSTEM_CONTRACT){};
+                                      _claimer(_self, _self),
+                                      _voters(SYSTEM_CONTRACT, SYSTEM_CONTRACT){};
 
     // @abi action
     void claim(const account_name user);
@@ -30,6 +30,7 @@ public:
     // @abi action
     void check(const account_name user);
 
+    void transfer(const account_name from, const account_name to, const asset quantity, const string memo);
 
 private:
     uint64_t _random(account_name user, uint64_t range)
@@ -74,7 +75,26 @@ private:
 
     typedef eosio::multi_index<N(claimer), claimer_info> claimer_index;
     claimer_index _claimer;
-
 };
 
-EOSIO_ABI(plusplusvote, (claim)(check))
+#define EOSIO_ABI_EX(TYPE, MEMBERS)                                                                              \
+    extern "C" {                                                                                                 \
+    void apply(uint64_t receiver, uint64_t code, uint64_t action)                                                \
+    {                                                                                                            \
+        if (action == N(onerror))                                                                                \
+        {                                                                                                        \
+            eosio_assert(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account"); \
+        }                                                                                                        \
+        auto self = receiver;                                                                                    \
+        if ((code == self && action != N(transfer)) || (code == N(pluspluscoin) && action == N(transfer)))       \
+        {                                                                                                        \
+            TYPE thiscontract(self);                                                                             \
+            switch (action)                                                                                      \
+            {                                                                                                    \
+                EOSIO_API(TYPE, MEMBERS)                                                                         \
+            }                                                                                                    \
+        }                                                                                                        \
+    }                                                                                                            \
+    }
+
+EOSIO_ABI_EX(plusplusvote, (transfer)(claim)(check))
